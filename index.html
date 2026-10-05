@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#111827">
+<title>30-Day Military Workout Timer</title>
+<style>
+:root{--bg:#0b1020;--panel:#151c2f;--panel2:#1d263d;--text:#f8fafc;--muted:#aab4c8;--accent:#38bdf8;--green:#34d399;--orange:#fb923c;--red:#f87171;--border:#2d3955}
+*{box-sizing:border-box} body{margin:0;background:linear-gradient(180deg,#090d18,#111827);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.app{max-width:1100px;margin:auto;padding:20px}.header{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:18px}.title h1{margin:0;font-size:clamp(1.5rem,4vw,2.4rem)}.title p{margin:5px 0;color:var(--muted)}
+.grid{display:grid;grid-template-columns:340px 1fr;gap:18px}.card{background:rgba(21,28,47,.94);border:1px solid var(--border);border-radius:18px;padding:18px;box-shadow:0 12px 30px #0003}
+.controls label{display:block;font-weight:700;margin:13px 0 7px}.controls input,.controls select{width:100%;background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px;font-size:1rem}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.buttons{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}.btn{border:0;border-radius:11px;padding:12px;font-weight:800;font-size:1rem;cursor:pointer;background:#334155;color:white}.btn.primary{background:var(--accent);color:#06111b}.btn.danger{background:#7f1d1d}.btn:disabled{opacity:.45;cursor:not-allowed}
+.workout-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.badge{display:inline-block;padding:5px 9px;border-radius:999px;background:#263451;color:#cbd5e1;font-size:.8rem;font-weight:800}.workout-head h2{margin:8px 0 3px}.workout-head p{margin:0;color:var(--muted)}
+.timer{text-align:center;padding:20px 10px}.phase{font-size:1rem;font-weight:900;letter-spacing:.12em;color:var(--accent)}.exercise{font-size:clamp(1.5rem,5vw,2.5rem);font-weight:900;margin:8px 0}.time{font-variant-numeric:tabular-nums;font-size:clamp(4rem,14vw,8rem);line-height:1;font-weight:900;letter-spacing:-.05em}.progress{height:9px;background:#263149;border-radius:99px;overflow:hidden;margin:15px 0}.bar{height:100%;width:0;background:var(--accent);transition:width .2s linear}.next{color:var(--muted);min-height:24px}.timer-actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:16px}.timer-actions .btn{min-width:130px}
+.exercise-list{margin-top:18px}.exercise-list h3{margin:0 0 9px}.exercise-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #263149}.exercise-item:last-child{border-bottom:0}.num{width:27px;height:27px;display:grid;place-items:center;border-radius:50%;background:#263451;color:#dbeafe;font-weight:900;font-size:.8rem}.exercise-item.active{color:#7dd3fc;font-weight:800}.exercise-item.done{color:#94a3b8;text-decoration:line-through}.day-list{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-top:10px}.day{padding:9px 4px;border-radius:9px;border:1px solid var(--border);background:#182239;color:#dbeafe;cursor:pointer;font-weight:800}.day.active{background:var(--accent);color:#06111b}.day.recovery{background:#202b3d;color:#aebbd0}
+.summary{margin-top:15px;color:var(--muted);font-size:.9rem;line-height:1.5}.notice{padding:12px;border-radius:11px;background:#17233a;border:1px solid #2d4265;color:#cbd5e1;font-size:.9rem;line-height:1.45;margin-top:12px}
+@media(max-width:800px){.grid{grid-template-columns:1fr}.header{align-items:flex-start}.day-list{grid-template-columns:repeat(6,1fr)}}
+@media(max-width:480px){.app{padding:12px}.day-list{grid-template-columns:repeat(5,1fr)}.row{grid-template-columns:1fr}.buttons{grid-template-columns:1fr}.card{padding:14px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="header">
+  <div class="title"><h1>30-Day Military Workout</h1><p>Daily workout list + adjustable interval timer</p></div>
+  <button class="btn" id="todayBtn">Today's Workout</button>
+</header>
+
+<div class="grid">
+<aside class="card controls">
+  <h2>Timer Settings</h2>
+  <div class="row">
+    <div><label for="work">Work (sec)</label><input id="work" type="number" min="1" max="3600"></div>
+    <div><label for="rest">Rest (sec)</label><input id="rest" type="number" min="0" max="3600"></div>
+  </div>
+  <label for="rounds">Rounds</label><input id="rounds" type="number" min="1" max="20">
+  <div class="buttons"><button class="btn primary" id="apply">Apply Settings</button><button class="btn" id="resetSettings">Plan Defaults</button></div>
+  <h3 style="margin-top:22px">Choose Day</h3>
+  <div class="day-list" id="days"></div>
+  <div class="summary" id="daySummary"></div>
+  <div class="notice">The PDF schedule calls for 40/20 × 2 in Week 1, 45/15 × 3 in Weeks 2–3, and 50/10 × 3 in Week 4. You can change those values here. Recovery and AMRAP days are shown separately.</div>
+</aside>
+
+<main class="card">
+  <div class="workout-head">
+    <div><span class="badge" id="weekBadge"></span><h2 id="dayTitle"></h2><p id="dayDescription"></p></div>
+  </div>
+  <div class="timer">
+    <div class="phase" id="phase">READY</div>
+    <div class="exercise" id="currentExercise">Select a day</div>
+    <div class="time" id="time">00:00</div>
+    <div class="progress"><div class="bar" id="bar"></div></div>
+    <div class="next" id="next"></div>
+    <div class="timer-actions">
+      <button class="btn primary" id="start">Start</button>
+      <button class="btn" id="pause">Pause</button>
+      <button class="btn" id="reset">Reset</button><button class="btn" id="soundBtn">🔔 Sound On</button>
+    </div>
+  </div>
+  <div class="exercise-list"><h3>Today's List</h3><div id="exerciseList"></div></div>
+</main>
+</div>
+</div>
+
+<script>
+const plans = {
+  1:{week:"Week 1 — Build the Base", days:[1,2,3,4,5], work:40,rest:20,rounds:2, exercises:["Bodyweight squats","Push-ups — regular or hands elevated","Reverse lunges — alternate legs","Mountain climbers — controlled","Glute bridges","Plank","Marching high knees"], finisher:"6 min alternating 30 sec fast march / 30 sec easy march."},
+  2:{week:"Week 2 — Soldier Conditioning", days:[8,9,10,11,12], work:45,rest:15,rounds:3, exercises:["Squats","Push-ups","Reverse lunges","Mountain climbers","Glute bridges","Plank","High-knee march"], finisher:"3 min: 20 sec fast feet / 20 sec rest; 20 sec squats / 20 sec rest; 20 sec mountain climbers / 20 sec rest. Repeat."},
+  3:{week:"Week 3 — Combat Conditioning", days:[15,16,17,18,19], work:45,rest:15,rounds:3, exercises:["Squat → reach overhead","Push-ups","Alternating reverse lunges","Mountain climbers","Squat thrusts — step feet back/forward if needed","Plank shoulder taps","Glute bridges","High knees or fast marching"], finisher:"4 min: 20 sec hard / 20 sec easy — fast march, mountain climbers, squats, fast march; repeat."},
+  4:{week:"Week 4 — Military Challenge", days:[22,23,24,25,26], work:50,rest:10,rounds:3, exercises:["Push-ups","Squats","Reverse lunges","Mountain climbers","Squat thrusts","Plank","Glute bridges","High knees"], finisher:"Circuit is 24 minutes including rests. Use remaining time for a cooldown."}
+};
+const recovery = new Set([6,7,13,14,20,21]);
+const amrap = new Set([27,28,29]);
+const dayToPlan = d => d<=5?1:d<=12?2:d<=19?3:d<=26?4:null;
+let selectedDay = 1, timer=null, state={running:false,phase:"ready",index:0,round:1,remaining:0,total:0};
+
+const $=id=>document.getElementById(id);
+function planFor(d){return plans[dayToPlan(d)]}
+function defaultsFor(d){
+ const p=planFor(d);
+ return p ? {work:p.work,rest:p.rest,rounds:p.rounds} : {work:30,rest:20,rounds:1};
+}
+function saveSettings(){localStorage.setItem("mw-settings",JSON.stringify({work:+$("work").value,rest:+$("rest").value,rounds:+$("rounds").value,day:selectedDay}))}
+function loadSettings(){
+ const saved=JSON.parse(localStorage.getItem("mw-settings")||"null"), def=defaultsFor(selectedDay);
+ $("work").value=saved?.work ?? def.work; $("rest").value=saved?.rest ?? def.rest; $("rounds").value=saved?.rounds ?? def.rounds;
+}
+function renderDays(){
+ $("days").innerHTML="";
+ for(let d=1;d<=30;d++){let b=document.createElement("button");b.className="day"+(d===selectedDay?" active":"")+(recovery.has(d)||amrap.has(d)?" recovery":"");b.textContent=d;b.onclick=()=>selectDay(d);$("days").appendChild(b)}
+}
+function selectDay(d){
+ stopTimer();selectedDay=d;loadSettings();renderDays();renderDay();resetTimer();
+}
+function renderDay(){
+ const p=planFor(selectedDay);
+ $("dayTitle").textContent=`Day ${selectedDay}`;
+ if(recovery.has(selectedDay)){
+   $("weekBadge").textContent="Recovery";$("dayDescription").textContent="20–30 minute walk; no hard workout.";
+   $("exerciseList").innerHTML="<div class='notice'>Recovery day. Take a 20–30 minute walk; no hard workout.</div>"; $("daySummary").textContent="Recovery day";
+ } else if(amrap.has(selectedDay)){
+   $("weekBadge").textContent="Week 4 — AMRAP";$("dayDescription").textContent="5-min warm-up → 20-min AMRAP → 5-min easy walking/stretching.";
+   const xs=["10 squats","8 push-ups","10 alternating reverse lunges","10 mountain climbers / side","8 squat thrusts","20-sec plank"];
+   $("exerciseList").innerHTML=xs.map((x,i)=>`<div class='exercise-item'><span class='num'>${i+1}</span>${x}</div>`).join("");
+   $("daySummary").textContent="Days 27–29: 20-minute AMRAP";
+ } else if(selectedDay===30){
+   $("weekBadge").textContent="Fitness Test";$("dayDescription").textContent="Warm up for 5 minutes, then record your results.";
+   const xs=["Push-ups — 2 minutes","Bodyweight squats — 2 minutes","Alternating reverse lunges — 2 minutes","Mountain climbers — 2 minutes","Plank — 2 minutes, accumulate quality hold time"];
+   $("exerciseList").innerHTML=xs.map((x,i)=>`<div class='exercise-item'><span class='num'>${i+1}</span>${x}</div>`).join("");
+   $("daySummary").textContent="Day 30 baseline test";
+ } else {
+   $("weekBadge").textContent=p.week;$("dayDescription").textContent=`${$("work").value}s work / ${$("rest").value}s rest • ${$("rounds").value} rounds`;
+   $("exerciseList").innerHTML=p.exercises.map((x,i)=>`<div class='exercise-item' data-index='${i}'><span class='num'>${i+1}</span>${x}</div>`).join("");
+   $("daySummary").textContent=`Finisher: ${p.finisher}`;
+ }
+}
+function format(s){return `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`}
+function markList(){document.querySelectorAll(".exercise-item").forEach((el,i)=>{el.classList.toggle("active",i===state.index&&state.phase==="work");el.classList.toggle("done",i<state.index||state.phase==="rest"&&i===state.index)})}
+function setDisplay(){
+ $("phase").textContent=state.phase==="work"?"WORK":state.phase==="rest"?"REST":state.phase==="finisher"?"FINISHER":"READY";
+ $("currentExercise").textContent=state.phase==="rest"?"Rest":state.phase==="finisher"?(planFor(selectedDay)?.finisher||"Finisher"):(planFor(selectedDay)?.exercises[state.index]||"Ready");
+ $("time").textContent=format(Math.max(0,state.remaining));
+ $("bar").style.width=state.total?`${100*(1-state.remaining/state.total)}%`:"0%";
+ const p=planFor(selectedDay), next= p ? (state.index+1<p.exercises.length?p.exercises[state.index+1]:(state.round<p.rounds?p.exercises[0]:"Finisher")) : "";
+ $("next").textContent=state.running?`Round ${state.round} of ${$("rounds").value}${next?" • Next: "+next:""}`:"";
+ markList();
+}
+let wakeLock=null,soundEnabled=true,audioCtx=null;
+function ensureAudio(){try{if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume()}catch(e){}}
+function bell(){if(!soundEnabled)return;try{ensureAudio();const n=audioCtx.currentTime,o=audioCtx.createOscillator(),g=audioCtx.createGain();o.frequency.setValueAtTime(880,n);o.frequency.exponentialRampToValueAtTime(1320,n+.12);g.gain.setValueAtTime(.0001,n);g.gain.exponentialRampToValueAtTime(.25,n+.02);g.gain.exponentialRampToValueAtTime(.0001,n+.45);o.connect(g);g.connect(audioCtx.destination);o.start(n);o.stop(n+.5)}catch(e){}}
+async function requestWakeLock(){if('wakeLock'in navigator)try{wakeLock=await navigator.wakeLock.request('screen')}catch(e){}}
+async function releaseWakeLock(){if(wakeLock)try{await wakeLock.release()}catch(e){}wakeLock=null}
+document.addEventListener('visibilitychange',async()=>{if(document.visibilityState==='visible'&&state.running)await requestWakeLock()});
+function begin(){
+ const p=planFor(selectedDay); if(!p)return; ensureAudio();requestWakeLock();
+ state={running:true,phase:"work",index:0,round:1,remaining:+$("work").value,total:+$("work").value};
+ setDisplay(); clearInterval(timer); timer=setInterval(tick,1000);
+}
+function tick(){
+ if(!state.running)return;state.remaining--;
+ if(state.remaining<=0){
+  if(state.phase==="finisher"){finish();return}
+  if(state.phase==="work"){if(+$('rest').value>0){state.phase="rest";state.remaining=+$('rest').value;state.total=state.remaining;bell()}else advanceExercise()}
+  else advanceExercise();
+ }
+ setDisplay();
+}
+function startFinisher(){
+ const p=planFor(selectedDay);if(!p||!p.finisher){finish();return}
+ const duration=selectedDay<=5?360:selectedDay<=12?180:selectedDay<=19?240:0;
+ if(!duration){finish();return}
+ state.phase="finisher";state.remaining=duration;state.total=duration;bell();setDisplay();
+}
+function advanceExercise(){
+ const p=planFor(selectedDay);
+ if(state.index+1<p.exercises.length){state.index++;state.phase="work";state.remaining=+$('work').value;state.total=state.remaining;bell()}
+ else if(state.round<+$('rounds').value){state.round++;state.index=0;state.phase="work";state.remaining=+$('work').value;state.total=state.remaining;bell()}
+ else startFinisher();
+}
+function finish(){stopTimer();releaseWakeLock();bell();state.phase="ready";state.remaining=0;state.total=0;$("phase").textContent="COMPLETE";$("currentExercise").textContent="Workout complete!";$("next").textContent="Great job. Recover and hydrate.";markList()}
+function stopTimer(){clearInterval(timer);timer=null;state.running=false}
+async function resetTimer(){stopTimer();await releaseWakeLock();state={running:false,phase:"ready",index:0,round:1,remaining:0,total:0};setDisplay()}
+$("apply").onclick=()=>{saveSettings();renderDay();resetTimer()};
+$("resetSettings").onclick=()=>{const d=defaultsFor(selectedDay);$("work").value=d.work;$("rest").value=d.rest;$("rounds").value=d.rounds;saveSettings();renderDay();resetTimer()};
+$("start").onclick=()=>state.running?null:begin();
+$("pause").onclick=async()=>{if(state.running){stopTimer();await releaseWakeLock();$("phase").textContent="PAUSED"}else if(state.remaining>0){ensureAudio();await requestWakeLock();state.running=true;timer=setInterval(tick,1000);setDisplay()}};
+$("reset").onclick=resetTimer;
+$("soundBtn").onclick=()=>{soundEnabled=!soundEnabled;$("soundBtn").textContent=soundEnabled?"🔔 Sound On":"🔕 Sound Off";if(soundEnabled){ensureAudio();bell()}};
+$("todayBtn").onclick=()=>{const start=new Date("2026-10-05T00:00:00"); const now=new Date(); let diff=Math.floor((now-start)/86400000); let d=((diff%30)+30)%30+1; selectDay(d)};
+$("work").onchange=$("rest").onchange=$("rounds").onchange=()=>{renderDay()};
+renderDays();loadSettings();renderDay();resetTimer();
+</script>
+</body>
+</html>
